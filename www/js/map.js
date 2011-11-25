@@ -1,10 +1,54 @@
 var osm = {cpan: {}, leftpan: {on: false}, mappan: {}, ui: {fs: false}, layers:{}};
 var search = {};
+var mlayers = [];
+var rq;
 
 function $(id) { return document.getElementById(id); }
 
 function setView(position) {
   osm.map.setView(new L.LatLng(position.coords.latitude, position.coords.longitude), 10);
+}
+
+function removeMarkers() {
+  for(i=0;i<mlayers.length;i++) {
+    osm.map.removeLayer(mlayers[i]);
+  }
+  mlayers = [];
+}
+
+function addMarkers(json) {
+  var mlist=eval("(" + json + ")");
+  for(i=0;i<mlist.length;i++) {
+    var ll = new L.LatLng(mlist[i].lat, mlist[i].lon, true);
+    var m = new L.Marker(ll);
+    m.data = mlist[i];
+    m.bindPopup(mlist[i].name);
+    osm.map.addLayer(m);
+    mlayers.push(m);
+  }
+}
+
+function reloadMarkers() {
+  if(rq.readyState==4) {
+    removeMarkers();
+    addMarkers(rq.responseText);
+  }
+}
+
+function loadMarkers() {
+  var zoom = osm.map.getZoom();
+  if (zoom<14) {
+    removeMarkers();
+    return;
+  }
+  rq = new XMLHttpRequest();
+  var bounds = osm.map.getBounds();
+  var minll = bounds.getSouthWest();
+  var maxll = bounds.getNorthEast();
+  var msg = '/pt/mo-stops?bbox=' + minll.lng + ',' + minll.lat + ',' + maxll.lng + ',' + maxll.lat;
+  rq.onreadystatechange = reloadMarkers;
+  rq.open('GET', msg, true);
+  rq.send(null);
 }
 
 function init() {
@@ -14,12 +58,13 @@ function init() {
   else if (document.documentElement && document.documentElement.clientHeight) w = document.documentElement.clientWidth;
   else if (document.body) w = document.body.clientWidth;
   osm.layers.layerOSM = new L.TileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 18, attribution: 'Map data &copy; OpenStreetMap contributors'});
-  osm.map = new L.Map('map', {zoomControl: true, center: new L.LatLng(62.0, 88.0), zoom: (w > 1200 ? 3 : 2), layers: [osm.layers.layerOSM]});
+  osm.layers.pt = new L.TileLayer('http://{s}.tile.osmosnimki.ru/pt/{z}/{x}/{y}.png', {maxZoom: 18, attribution: 'Маршруты &copy; <a href="http://osm.org">LatLon.org</a>', subdomains: 'abcdef'});
+  osm.map = new L.Map('map', {zoomControl: true, center: new L.LatLng(62.0, 88.0), zoom: (w > 1200 ? 3 : 2), layers: [osm.layers.layerOSM, osm.layers.pt]});
 
   osm.layers.search_marker = new L.LayerGroup();
   osm.layers.osb = new L.OpenStreetBugs();
   osm.map.addLayer(osm.layers.search_marker);
-  osm.map.control_layers = new L.Control.Layers({'OSM':osm.layers.layerOSM}, {'отметки поиска':osm.layers.search_marker, 'Bugs':osm.layers.osb});
+  osm.map.control_layers = new L.Control.Layers({'OSM':osm.layers.layerOSM}, {'отметки поиска':osm.layers.search_marker, 'Bugs':osm.layers.osb, 'Маршруты':osm.layers.pt});
   osm.map.addControl(osm.map.control_layers);
 
   osm.leftpan.panel = $('leftpan');
@@ -30,7 +75,10 @@ function init() {
   osm.map.addLayer(osm.search_marker);
   
   osm.map.addControl(new L.Control.Permalink());
-  
+
+  loadMarkers(); 
+  osm.map.on('moveend', loadMarkers);
+ 
   search.inLoad();
   osm.setLinkOSB();
 };
