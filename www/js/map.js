@@ -1,7 +1,6 @@
 var osm = {cpan: {}, leftpan: {on: false}, mappan: {}, ui: {fs: false}, layers:{}};
 var search = {};
-var mlayers = [];
-var rq;
+var stops = {mlayers: [], rq: null};
 
 function $(id) { return document.getElementById(id); }
 
@@ -10,10 +9,10 @@ function setView(position) {
 }
 
 function removeMarkers() {
-  for(i=0;i<mlayers.length;i++) {
-    osm.map.removeLayer(mlayers[i]);
+  for(i=0;i<stops.mlayers.length;i++) {
+    osm.layers.stops.removeLayer(stops.mlayers[i]);
   }
-  mlayers = [];
+  stops.mlayers = [];
 }
 
 function addMarkers(json) {
@@ -39,15 +38,15 @@ function addMarkers(json) {
       p = p + "<br/>&nbsp;&nbsp;" + rt + " <a href=\"javascript:loadRoute(" + r[1] + ")\">" + r[2] + "</a>";
     }
     m.bindPopup(p);
-    osm.map.addLayer(m);
-    mlayers.push(m);
+    osm.layers.stops.addLayer(m);
+    stops.mlayers.push(m);
   }
 }
 
 function reloadMarkers() {
-  if(rq.readyState==4) {
+  if(stops.rq.readyState==4) {
     removeMarkers();
-    addMarkers(rq.responseText);
+    addMarkers(stops.rq.responseText);
   }
 }
 
@@ -57,30 +56,30 @@ function loadMarkers() {
     removeMarkers();
     return;
   }
-  rq = new XMLHttpRequest();
+  stops.rq = new XMLHttpRequest();
   var bounds = osm.map.getBounds();
   var minll = bounds.getSouthWest();
   var maxll = bounds.getNorthEast();
   var msg = '/pt/mo-stops?bbox=' + minll.lng + ',' + minll.lat + ',' + maxll.lng + ',' + maxll.lat;
-  rq.onreadystatechange = reloadMarkers;
-  rq.open('GET', msg, true);
-  rq.send(null);
+  stops.rq.onreadystatechange = reloadMarkers;
+  stops.rq.open('GET', msg, true);
+  stops.rq.send(null);
 }
 
 function showRoute() {
-  if(rq.readyState!=4) return;
+  if(stops.rq.readyState!=4) return;
   var p = new L.Popup();
-  p.setContent(rq.responseText);
+  p.setContent(stops.rq.responseText);
   p.setLatLng(osm.map.getCenter());
   osm.map.openPopup(p);
 }
 
 function loadRoute(id) {
-  rq = new XMLHttpRequest();
+  stops.rq = new XMLHttpRequest();
   var msg = '/pt/mo-route:' + id;
-  rq.onreadystatechange = showRoute;
-  rq.open('GET', msg, true);
-  rq.send(null);
+  stops.rq.onreadystatechange = showRoute;
+  stops.rq.open('GET', msg, true);
+  stops.rq.send(null);
 }
 
 function init() {
@@ -94,7 +93,8 @@ function init() {
   osm.layers.layerCycle = new L.TileLayer('http://{s}.tile.opencyclemap.org/cycle/{z}/{x}/{y}.png', {maxZoom: 18, attribution: 'Map data &copy; OpenStreetMap contributors'});
   osm.layers.layerTransport = new L.TileLayer('http://{s}.tile2.opencyclemap.org/transport/{z}/{x}/{y}.png', {maxZoom: 18, attribution: 'Map data &copy; OpenStreetMap contributors'});
   osm.layers.pt = new L.TileLayer('http://{s}.tile.osmosnimki.ru/pt/{z}/{x}/{y}.png', {maxZoom: 18, attribution: 'Маршруты &copy; <a href="http://osm.org">LatLon.org</a>', subdomains: 'abcdef'});
-  osm.map = new L.Map('map', {zoomControl: true, center: new L.LatLng(62.0, 88.0), zoom: (w > 1200 ? 3 : 2), layers: [osm.layers.layerMapnik, osm.layers.pt]});
+  osm.layers.stops = new L.LayerGroup();
+  osm.map = new L.Map('map', {zoomControl: true, center: new L.LatLng(62.0, 88.0), zoom: (w > 1200 ? 3 : 2), layers: [osm.layers.layerMapnik, osm.layers.pt, osm.layers.stops]});
 
   osm.layers.search_marker = new L.LayerGroup();
   osm.layers.osb = new L.OpenStreetBugs();
@@ -109,7 +109,8 @@ function init() {
     {
       'отметки поиска':osm.layers.search_marker,
       'Bugs':osm.layers.osb,
-      'Маршруты':osm.layers.pt
+      'Маршруты':osm.layers.pt,
+      'Остановки':osm.layers.stops
     }
   );
   osm.map.addControl(osm.map.control_layers);
