@@ -22,7 +22,23 @@ function addMarkers(json) {
     var ll = new L.LatLng(mlist[i].lat, mlist[i].lon, true);
     var m = new L.Marker(ll);
     m.data = mlist[i];
-    m.bindPopup(mlist[i].name);
+    var p = "";
+    p = "<b>" + m.data.name + "</b><hr/>";
+    if(m.data.bus_ref) p = p + "<br/><b>Автобусы:</b> " + m.data.bus_ref;
+    if(m.data.trolleybus_ref) p = p + "<br/><b>Троллейбусы:</b> " + m.data.trolleybus_ref;
+    if(m.data.tram_ref) p = p + "<br/><b>Трамваи:</b> " + m.data.tram_ref;
+    if(m.data.share_taxi_ref) p = p + "<br/><b>Маршрутки:</b> " + m.data.share_taxi_ref;
+    p = p + "<br/><b>Подробнее по новым маршрутам:</b>";
+    for(j=0;j<m.data.routes.length;j++) {
+      var r=eval("(" + m.data.routes[j] + ")");
+      var rt = r[0];
+      if(rt == "bus") rt = "Автобус";
+      else if(rt == "trolleybus") rt = "Троллейбус";
+      else if(rt == "tram") rt = "Трамвай";
+      else if(rt == "share_taxi") rt = "Маршрутка";
+      p = p + "<br/>&nbsp;&nbsp;" + rt + " <a href=\"javascript:loadRoute(" + r[1] + ")\">" + r[2] + "</a>";
+    }
+    m.bindPopup(p);
     osm.map.addLayer(m);
     mlayers.push(m);
   }
@@ -47,6 +63,22 @@ function loadMarkers() {
   var maxll = bounds.getNorthEast();
   var msg = '/pt/mo-stops?bbox=' + minll.lng + ',' + minll.lat + ',' + maxll.lng + ',' + maxll.lat;
   rq.onreadystatechange = reloadMarkers;
+  rq.open('GET', msg, true);
+  rq.send(null);
+}
+
+function showRoute() {
+  if(rq.readyState!=4) return;
+  var p = new L.Popup();
+  p.setContent(rq.responseText);
+  p.setLatLng(osm.map.getCenter());
+  osm.map.openPopup(p);
+}
+
+function loadRoute(id) {
+  rq = new XMLHttpRequest();
+  var msg = '/pt/mo-route:' + id;
+  rq.onreadystatechange = showRoute;
   rq.open('GET', msg, true);
   rq.send(null);
 }
