@@ -1,6 +1,10 @@
 var osm = {cpan: {}, leftpan: {on: false}, mappan: {}, ui: {fs: false}, layers:{}};
 var search = {};
-var stops = {mlayers: [], rq: null};
+var stops = {
+  mlayers: [],
+  rq: null,
+  busIcon: L.Icon.extend({iconUrl:'img/bus.png',shadowUrl:null,iconSize:new L.Point(32,37),iconAnchor:new L.Point(16,40),popupAnchor:new L.Point(0,-23)})
+};
 
 function $(id) { return document.getElementById(id); }
 
@@ -19,7 +23,7 @@ function addMarkers(json) {
   var mlist=eval("(" + json + ")");
   for(i=0;i<mlist.length;i++) {
     var ll = new L.LatLng(mlist[i].lat, mlist[i].lon, true);
-    var m = new L.Marker(ll);
+    var m = new L.Marker(ll, {icon: new stops.busIcon()});
     m.data = mlist[i];
     var p = "";
     p = "<b>" + m.data.name + "</b><hr/>";
