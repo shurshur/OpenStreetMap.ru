@@ -139,13 +139,15 @@ function init() {
   osm.layers.layerTAH = new L.TileLayer('http://{s}.tah.openstreetmap.org/Tiles/tile/{z}/{x}/{y}.png', {maxZoom: 18, attribution: 'Map data &copy; OpenStreetMap contributors'});
   osm.layers.layerCycle = new L.TileLayer('http://{s}.tile.opencyclemap.org/cycle/{z}/{x}/{y}.png', {maxZoom: 18, attribution: 'Map data &copy; OpenStreetMap contributors'});
   osm.layers.layerTransport = new L.TileLayer('http://{s}.tile2.opencyclemap.org/transport/{z}/{x}/{y}.png', {maxZoom: 18, attribution: 'Map data &copy; OpenStreetMap contributors'});
-  osm.layers.pt = new L.TileLayer('http://{s}.tile.osmosnimki.ru/pt/{z}/{x}/{y}.png', {maxZoom: 18, attribution: 'Маршруты &copy; <a href="http://osm.org">LatLon.org</a>', subdomains: 'abcdef'});
-  osm.layers.stops = new L.LayerGroup();
-  osm.map = new L.Map('map', {zoomControl: true, center: center, zoom: zoom, layers: [osm.layers.layerMapnik, osm.layers.pt, osm.layers.stops]});
+  osm.layers.layerLatlonPt = new L.TileLayer('http://{s}.tile.osmosnimki.ru/pt/{z}/{x}/{y}.png', {maxZoom: 18, attribution: 'Маршруты &copy; <a href="http://osm.org">LatLon.org</a>', subdomains: 'abcdef'});
+  osm.map = new L.Map('map', {zoomControl: true, center: center, zoom: zoom, layers: [osm.layers.layerMapnik]});
 
   osm.layers.search_marker = new L.LayerGroup();
   osm.layers.osb = new L.OpenStreetBugs();
+  osm.layers.stops = new L.LayerGroup();
   osm.map.addLayer(osm.layers.search_marker);
+  osm.map.addLayer(osm.layers.layerLatlonPt);
+  osm.map.addLayer(osm.layers.stops);
   osm.map.control_layers = new L.Control.Layers(
     {
       'Mapnik':osm.layers.layerMapnik,
@@ -156,7 +158,7 @@ function init() {
     {
       'отметки поиска':osm.layers.search_marker,
       'Bugs':osm.layers.osb,
-      'Маршруты':osm.layers.pt,
+      'Маршруты':osm.layers.layerLatlonPt,
       'Остановки':osm.layers.stops
     }
   );
