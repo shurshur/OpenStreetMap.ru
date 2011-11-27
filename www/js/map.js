@@ -86,19 +86,62 @@ function loadRoute(id) {
   stops.rq.send(null);
 }
 
+function saveLocation() {
+  var ll = osm.map.getCenter();
+  var z = osm.map.getZoom();
+
+  var d = new Date();
+  d.setYear(d.getFullYear()+10);
+  
+  document.cookie = "_osm_location=" + ll.lng + "|" + ll.lat + "|" + z + "|; expires=" + d.toGMTString();
+}
+
+function getCookie(name) {
+  var cookie = " " + document.cookie;
+  var search = " " + name + "=";
+  var setStr = null;
+  var offset = 0;
+  var end = 0;
+  if (cookie.length > 0) {
+    offset = cookie.indexOf(search);
+    if (offset != -1) {
+      offset += search.length;
+      end = cookie.indexOf(";", offset)
+	if (end == -1) {
+	  end = cookie.length;
+	}
+      setStr = unescape(cookie.substring(offset, end));
+    }
+  }
+  return(setStr);
+}
+
 function init() {
   parseGET();
   var w;
   if (self.innerHeight) w = self.innerWidth;
   else if (document.documentElement && document.documentElement.clientHeight) w = document.documentElement.clientWidth;
   else if (document.body) w = document.body.clientWidth;
+
+  var loc = getCookie('_osm_location');
+  var center;
+  var zoom;
+  if(loc) {
+    var locs = loc.split('|');
+    center = new L.LatLng(locs[1], locs[0]);
+    zoom = locs[2];
+  } else {
+    center = new L.LatLng(62.0, 88.0);
+    zoom = w > 1200 ? 3 : 2;
+  }
+  
   osm.layers.layerMapnik = new L.TileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 18, attribution: 'Map data &copy; OpenStreetMap contributors'});
   osm.layers.layerTAH = new L.TileLayer('http://{s}.tah.openstreetmap.org/Tiles/tile/{z}/{x}/{y}.png', {maxZoom: 18, attribution: 'Map data &copy; OpenStreetMap contributors'});
   osm.layers.layerCycle = new L.TileLayer('http://{s}.tile.opencyclemap.org/cycle/{z}/{x}/{y}.png', {maxZoom: 18, attribution: 'Map data &copy; OpenStreetMap contributors'});
   osm.layers.layerTransport = new L.TileLayer('http://{s}.tile2.opencyclemap.org/transport/{z}/{x}/{y}.png', {maxZoom: 18, attribution: 'Map data &copy; OpenStreetMap contributors'});
   osm.layers.pt = new L.TileLayer('http://{s}.tile.osmosnimki.ru/pt/{z}/{x}/{y}.png', {maxZoom: 18, attribution: 'Маршруты &copy; <a href="http://osm.org">LatLon.org</a>', subdomains: 'abcdef'});
   osm.layers.stops = new L.LayerGroup();
-  osm.map = new L.Map('map', {zoomControl: true, center: new L.LatLng(62.0, 88.0), zoom: (w > 1200 ? 3 : 2), layers: [osm.layers.layerMapnik, osm.layers.pt, osm.layers.stops]});
+  osm.map = new L.Map('map', {zoomControl: true, center: center, zoom: zoom, layers: [osm.layers.layerMapnik, osm.layers.pt, osm.layers.stops]});
 
   osm.layers.search_marker = new L.LayerGroup();
   osm.layers.osb = new L.OpenStreetBugs();
@@ -133,6 +176,8 @@ function init() {
  
   search.inLoad();
   osm.setLinkOSB();
+
+  osm.map.on('moveend', saveLocation);
 };
 
 osm.setLinkOSB = function() {
